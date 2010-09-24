@@ -24,6 +24,65 @@
 			 * dump an array of data from Apc to see what is going on
 			 */
 			//outputApcData();
+			return;
+			$DB = ConnectionManager::getDataSource('default');
+			$skip = array(
+				'SHOW FULL COLUMNS FROM',
+				'SELECT CHARACTER_SET_NAME'
+			);
+			$profiles = array();
+			foreach($DB->query('show profiles;') as $k => $profile){
+				$explain = true;
+				foreach($skip as $miss){
+					$explain &= !strstr($profile[0]['Query'], $miss);
+				}
+				if(!isset($profile[0]['Query']) || !$explain){
+					continue;
+				}
+				pr($profile[0]);
+				$profiles[] = array_merge(
+					$profile[0],
+					array(
+						'profile' => $DB->query(sprintf('show profile for query %s;', $profile[0]['Query_ID'])),
+						'explain' => $DB->query(sprintf('EXPLAIN %s;', $profile[0]['Query']))
+					)
+				);
+			}
+			echo '<div style="background:#ffffff";><table><tr>
+				<th>ID</th>
+				<th colspan="7">Query</th>
+				<th style="width:100px;">Status</th>
+				<th style="width:100px;">Duration</th></tr>';
+			foreach($profiles as $profile){
+				echo '<tr style="border-top:1px solid;">
+					<td>', $profile['Query_ID'], '</td>
+					<td colspan="7">', $profile['Query'], '</td>
+					<td>Total: </td><td>', $profile['Duration'], '</td></tr>';
+				foreach((array)$profile['explain'] as $explain) {
+					$_extra = '<table>';
+					foreach($profile['profile'] as $_p){
+						$_extra .= '<tr><td>'.$_p['PROFILING']['Status'].'</td><td>'.$_p['PROFILING']['Duration'].'</td></tr>';
+					}
+					$_extra .= '</table>';
+					echo '<tr>
+						<td>', $explain[0]['select_type'], '&nbsp;</td>
+						<td>', $explain[0]['table'], '&nbsp;</td>
+						<td>', $explain[0]['type'], '&nbsp;</td>
+						<td>', $explain[0]['possible_keys'], '&nbsp;</td>
+						<td>', $explain[0]['key'], ' (', $explain[0]['key_len'], ')&nbsp;</td>
+						<td>', $explain[0]['ref'], '</td><td>', $explain[0]['rows'],'&nbsp;</td>
+						<td>', $explain[0]['Extra'], '&nbsp;</td>
+						<td colspan="5">', $_extra, '</td>
+					</tr>';
+				}
+			}
+			echo '</table></div>';
+		}
+
+		public function onAttachBehaviors(&$event){
+			if(is_subclass_of($event->Handler, 'Model') && isset($event->Handler->_schema) && is_array($event->Handler->_schema)) {
+				$event->Handler->Behaviors->attach('Dev.Dev');
+			}
 		}
 	}
 
