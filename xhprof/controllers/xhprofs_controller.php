@@ -23,6 +23,10 @@
 
 		public $uses = array();
 
+		public $helpers = array(
+			'Filter.Filter'
+		);
+
 		public $xhprofSessions = array();
 		public $xhprofData = array();
 
