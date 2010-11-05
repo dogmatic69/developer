@@ -1,2 +1,2 @@
 # Developer ignores
-config/database.php
+config/api_config.ini
